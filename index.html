@@ -259,10 +259,10 @@
       </div>
 
       <div class="form-group">
-        <label>Descuento (ARS)</label>
+        <label>Descuento (ARS) — automático</label>
         <div class="input-prefix">
           <span>$</span>
-          <input type="number" id="descuento" min="0" step="0.01" placeholder="0.00" oninput="recalcImporte()" />
+          <input type="number" id="descuento" readonly placeholder="Calculado automáticamente" />
         </div>
       </div>
 
@@ -338,7 +338,7 @@
           <div><div style="font-size:18px;">🌾</div><div style="font-size:11px;color:var(--muted);font-weight:600;margin:4px 0;">Clasica</div><input type="number" id="m-qty-Clasica" min="0" value="0" style="text-align:center;padding:6px;" /></div>
         </div>
       </div>
-      <div class="form-group"><label>Descuento</label><input type="number" id="m-descuento" placeholder="0" min="0" /></div>
+      <div class="form-group"><label>Descuento — automático</label><input type="number" id="m-descuento" readonly placeholder="Calculado" /></div>
       <div class="form-group"><label>Envío / Zona</label><input type="text" id="m-envio" /></div>
       <div class="form-group modal-full"><label>Estado</label><select id="m-estado"><option>Pedido</option><option>Aprobado</option><option>Enviando</option><option>Entregado</option></select></div>
       <div class="form-group"><label>Fecha pedido</label><input type="date" id="m-fechaPedido" /></div>
@@ -456,26 +456,31 @@
   function updateCard(tipo, val) {
     const card = document.querySelector(`.variedad-card[data-tipo="${tipo}"]`);
     if (card) card.classList.toggle('active', val > 0);
-    const hint = document.getElementById('phint-' + tipo);
-    if (hint) {
-      if (val > 0 && PRECIOS[val]) hint.textContent = '$ ' + fmtNum(PRECIOS[val]);
-      else if (val > 4) hint.textContent = 'consultar precio';
-      else hint.textContent = '';
-    }
+    // El hint muestra el precio total acumulado del pedido completo
+    TIPOS.forEach(t => {
+      const h = document.getElementById('phint-' + t);
+      if (!h) return;
+      let totalUnidades = 0;
+      TIPOS.forEach(t2 => { totalUnidades += parseInt(document.getElementById('qty-'+t2).value)||0; });
+      if (totalUnidades === 0) { h.textContent = ''; return; }
+      const precio = PRECIOS[totalUnidades] || Math.round(totalUnidades * PRECIOS[4] / 4);
+      h.textContent = totalUnidades + (totalUnidades===1?' u.':' u.') + ' → $' + fmtNum(precio);
+    });
   }
 
   function recalcImporte() {
-    let total = 0;
-    TIPOS.forEach(t => {
-      const qty = parseInt(document.getElementById('qty-'+t).value)||0;
-      if (qty > 0) total += PRECIOS[qty] || (qty * PRECIOS[4] / 4);
-    });
-    const desc = parseFloat(document.getElementById('descuento').value)||0;
-    const neto = Math.max(0, total - desc);
+    // Precio por TOTAL de unidades del pedido (suma de todas las variedades)
+    let totalUnidades = 0;
+    TIPOS.forEach(t => { totalUnidades += parseInt(document.getElementById('qty-'+t).value)||0; });
+    const importe = totalUnidades > 0 ? (PRECIOS[totalUnidades] || Math.round(totalUnidades * PRECIOS[4] / 4)) : 0;
     const el = document.getElementById('importeDisplay');
-    el.textContent = '$ ' + fmtNum(neto);
-    el.classList.toggle('has-value', neto > 0);
-    return neto;
+    el.textContent = '$ ' + fmtNum(importe);
+    el.classList.toggle('has-value', importe > 0);
+    // Descuento = precio lista (unidades × $5.000) − importe cobrado
+    const precioLista = totalUnidades * 5000;
+    const descuento = Math.max(0, precioLista - importe);
+    document.getElementById('descuento').value = descuento > 0 ? descuento : '';
+    return importe;
   }
 
   function getVariedades() {
@@ -620,12 +625,14 @@
     const idx = pedidos.findIndex(x=>x.id===editingId);
     if (idx<0) return;
     const variedades = TIPOS.map(t=>({tipo:t, cantidad:parseInt(document.getElementById('m-qty-'+t).value)||0})).filter(v=>v.cantidad>0);
-    let total=0;
-    variedades.forEach(v=>{ total += PRECIOS[v.cantidad]||(v.cantidad*PRECIOS[4]/4); });
-    const desc = parseFloat(document.getElementById('m-descuento').value)||0;
-    const importe = Math.max(0, total-desc);
+    let totalUnidades=0;
+    variedades.forEach(v=>{ totalUnidades += v.cantidad; });
+    const importe = totalUnidades>0 ? (PRECIOS[totalUnidades]||Math.round(totalUnidades*PRECIOS[4]/4)) : 0;
+    const precioLista = totalUnidades * 5000;
+    const descuento = Math.max(0, precioLista - importe);
+    document.getElementById('m-descuento').value = descuento>0 ? descuento : '';
     pedidos[idx] = { ...pedidos[idx], variedades, importe,
-      descuento:    document.getElementById('m-descuento').value,
+      descuento:    String(descuento),
       envio:        document.getElementById('m-envio').value,
       estado:       document.getElementById('m-estado').value,
       fechaPedido:  document.getElementById('m-fechaPedido').value,
