@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crune · Registro de Pedidos</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf7f2;
+    --surface: #ffffff;
+    --surface2: #f5f0e8;
+    --border: #e8e0d0;
+    --accent: #8B3A1A;
+    --accent2: #c4773a;
+    --text: #1a1208;
+    --muted: #9a8a78;
+    --choco: #5C2D0A;
+    --aranda: #6B2F6B;
+    --clasica: #8B6914;
+    --success: #2d7a3a;
+    --danger: #c0392b;
+    --radius: 14px;
+    --shadow: 0 2px 16px rgba(139,58,26,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; min-height: 100vh; }
+  .top-bar { height: 4px; background: linear-gradient(90deg, var(--choco), var(--aranda), var(--clasica), var(--accent2)); }
+  .app { max-width: 780px; margin: 0 auto; padding: 36px 24px 80px; }
+
+  /* Header */
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 40px; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-icon { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+  .brand-text h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 900; letter-spacing: -0.02em; color: var(--accent); line-height: 1; }
+  .brand-text p { font-size: 12px; color: var(--muted); margin-top: 3px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 500; }
+  .status-pill { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); flex-shrink: 0; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .status-dot.ok  { background: var(--success); box-shadow: 0 0 6px rgba(45,122,58,0.5); }
+  .status-dot.err { background: var(--danger); }
+
+  /* Config */
+  .config-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px; overflow: hidden; box-shadow: var(--shadow); }
+  .config-toggle { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; gap: 12px; }
+  .config-toggle:hover { background: var(--surface2); }
+  .config-toggle-left { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .config-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--border); }
+  .config-body.open { display: block; }
+  .config-hint { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; line-height: 1.6; margin: 14px 0 12px; background: var(--surface2); padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--accent2); }
+
+  /* Form */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 28px; box-shadow: var(--shadow); }
+  .form-section-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--accent); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  input, select, textarea {
+    background: var(--surface2); border: 1.5px solid var(--border); border-radius: 9px;
+    color: var(--text); font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 400;
+    padding: 11px 13px; outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    width: 100%; -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent2); background: #fff; box-shadow: 0 0 0 3px rgba(196,119,58,0.12); }
+  input::placeholder { color: #c0b09a; }
+  input[readonly] { color: var(--muted); cursor: default; }
+  select option { background: #fff; }
+  textarea { resize: vertical; min-height: 72px; }
+
+  /* Variedades */
+  .variedades-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .variedad-card { border: 2px solid var(--border); border-radius: 12px; padding: 14px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--surface2); transition: border-color 0.15s, background 0.15s; }
+  .variedad-card.active { background: #fff; }
+  .variedad-card[data-tipo="Chocolate"].active { border-color: var(--choco); }
+  .variedad-card[data-tipo="Arandanos"].active { border-color: var(--aranda); }
+  .variedad-card[data-tipo="Clasica"].active   { border-color: var(--clasica); }
+  .variedad-emoji { font-size: 22px; }
+  .variedad-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .variedad-card[data-tipo="Chocolate"].active .variedad-label { color: var(--choco); }
+  .variedad-card[data-tipo="Arandanos"].active .variedad-label { color: var(--aranda); }
+  .variedad-card[data-tipo="Clasica"].active   .variedad-label { color: var(--clasica); }
+  .variedad-precio { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent2); min-height: 15px; }
+  .variedad-qty { display: flex; align-items: center; gap: 6px; }
+  .qty-btn { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--surface); color: var(--muted); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; flex-shrink: 0; font-weight: 600; padding: 0; }
+  .qty-btn:hover { border-color: var(--accent2); color: var(--accent); }
+  .qty-input { width: 38px !important; text-align: center; font-size: 15px !important; font-weight: 600 !important; padding: 5px 4px !important; border-radius: 6px !important; }
+
+  /* Importe calculado */
+  .importe-display { background: var(--surface2); border: 1.5px solid var(--border); border-radius: 9px; padding: 11px 13px; font-family: 'DM Mono', monospace; font-size: 18px; color: var(--muted); font-weight: 500; transition: all 0.2s; }
+  .importe-display.has-value { background: #fff8f0; border-color: var(--accent2); color: var(--accent); }
+
+  /* Estado pills */
+  .estado-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .estado-pill { padding: 8px 14px; border-radius: 8px; border: 1.5px solid var(--border); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; background: var(--surface2); color: var(--muted); user-select: none; }
+  .estado-pill.selected[data-estado="Pedido"]    { background:#FFF3CD; border-color:#e0b800; color:#7a6000; }
+  .estado-pill.selected[data-estado="Aprobado"]  { background:#d4edda; border-color:#28a745; color:#155724; }
+  .estado-pill.selected[data-estado="Enviando"]  { background:#cce5ff; border-color:#0d6efd; color:#004085; }
+  .estado-pill.selected[data-estado="Entregado"] { background:#d1ecf1; border-color:#17a2b8; color:#0c5460; }
+
+  /* Prefix */
+  .input-prefix { position: relative; }
+  .input-prefix span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--accent2); font-family: 'DM Mono', monospace; font-size: 13px; pointer-events: none; }
+  .input-prefix input { padding-left: 28px; }
+
+  .form-divider { grid-column: 1 / -1; height: 1px; background: var(--border); margin: 6px 0; }
+
+  /* Botones */
+  .btn-submit { width: 100%; margin-top: 22px; padding: 15px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s, box-shadow 0.15s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .btn-submit:hover { background: #6d2d14; box-shadow: 0 4px 20px rgba(139,58,26,0.3); transform: translateY(-1px); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
+  .btn-submit.loading .btn-spinner { display: block; }
+  .btn-submit.loading .btn-label { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-save-config { margin-top: 12px; padding: 9px 18px; background: transparent; border: 1.5px solid var(--accent); color: var(--accent); border-radius: 7px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .btn-save-config:hover { background: var(--accent); color: #fff; }
+
+  /* Historial */
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .section-header-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; color: var(--text); }
+  .section-header-line { flex: 1; height: 1px; background: var(--border); }
+
+  .pedido-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); animation: slideIn 0.25s ease; border-left: 4px solid var(--border); }
+  .pedido-card[data-tipo="Chocolate"] { border-left-color: var(--choco); }
+  .pedido-card[data-tipo="Arandanos"] { border-left-color: var(--aranda); }
+  .pedido-card[data-tipo="Clasica"]   { border-left-color: var(--clasica); }
+  .pedido-card[data-tipo="multi"]     { border-left-color: var(--accent2); }
+  @keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+  .pedido-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .pedido-card-left { flex: 1; min-width: 0; }
+  .pedido-nombre { font-weight: 600; font-size: 15px; }
+  .pedido-num { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-left: 6px; }
+  .pedido-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .pedido-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+  .pedido-importe { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; color: var(--accent); }
+
+  .pedido-actions { display: flex; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .btn-action { padding: 6px 14px; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: 1.5px solid var(--border); background: var(--surface2); color: var(--muted); }
+  .btn-action.edit { border-color: var(--accent2); color: var(--accent2); }
+  .btn-action.edit:hover { background: var(--accent2); color: #fff; }
+  .btn-action.del  { border-color: var(--danger); color: var(--danger); }
+  .btn-action.del:hover  { background: var(--danger); color: #fff; }
+
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-pedido    { background:#FFF3CD; color:#7a6000; }
+  .badge-aprobado  { background:#d4edda; color:#155724; }
+  .badge-enviando  { background:#cce5ff; color:#004085; }
+  .badge-entregado { background:#d1ecf1; color:#0c5460; }
+
+  .empty-state { text-align: center; padding: 36px; color: var(--muted); font-size: 14px; border: 1.5px dashed var(--border); border-radius: var(--radius); }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); padding: 28px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--accent); margin-bottom: 20px; }
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-full { grid-column: 1 / -1; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-modal-save { flex: 1; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-modal-save:hover { background: #6d2d14; }
+  .btn-modal-cancel { padding: 12px 18px; background: transparent; border: 1.5px solid var(--border); color: var(--muted); border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 14px; display: flex; align-items: center; gap: 9px; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); z-index: 300; white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--success); }
+  .toast.error   { border-color: var(--danger); }
+
+  @media (max-width: 520px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+    .header { flex-direction: column; }
+    .variedades-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="top-bar"></div>
+<div class="app">
+
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">🌾</div>
+      <div class="brand-text"><h1>Crune</h1><p>Registro de pedidos</p></div>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Sin configurar</span>
+    </div>
+  </div>
+
+  <!-- Config -->
+  <div class="config-card">
+    <div class="config-toggle" onclick="toggleConfig()">
+      <div class="config-toggle-left">⚙️ <span>Conexión con Google Sheets</span></div>
+      <span id="configArrow" style="color:var(--muted);font-size:12px;">▼</span>
+    </div>
+    <div class="config-body" id="configBody">
+      <div class="config-hint">
+        1. Pegá el código del archivo <strong>apps-script-granola.gs</strong> en Apps Script de tu Sheet<br>
+        2. Implementar → Nueva implementación → Web App → Cualquier usuario<br>
+        3. Copiá la URL y pegala acá
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label>URL del Web App</label>
+        <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/..." />
+      </div>
+      <button class="btn-save-config" onclick="saveConfig()">Guardar conexión</button>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="form-card">
+    <div class="form-section-title">🛒 Nuevo pedido</div>
+    <div class="form-grid">
+
+      <div class="form-group full">
+        <label>Variedades y cantidades</label>
+        <div class="variedades-grid">
+          <div class="variedad-card" data-tipo="Chocolate">
+            <div class="variedad-emoji">🍫</div>
+            <div class="variedad-label">Chocolate</div>
+            <div class="variedad-precio" id="phint-Chocolate"></div>
+            <div class="variedad-qty">
+              <button class="qty-btn" onclick="changeQty('Chocolate',-1)" type="button">−</button>
+              <input class="qty-input" type="number" id="qty-Chocolate" value="0" min="0" oninput="onQtyInput('Chocolate')" />
+              <button class="qty-btn" onclick="changeQty('Chocolate',1)" type="button">+</button>
+            </div>
+          </div>
+          <div class="variedad-card" data-tipo="Arandanos">
+            <div class="variedad-emoji">🫐</div>
+            <div class="variedad-label">Arandanos</div>
+            <div class="variedad-precio" id="phint-Arandanos"></div>
+            <div class="variedad-qty">
+              <button class="qty-btn" onclick="changeQty('Arandanos',-1)" type="button">−</button>
+              <input class="qty-input" type="number" id="qty-Arandanos" value="0" min="0" oninput="onQtyInput('Arandanos')" />
+              <button class="qty-btn" onclick="changeQty('Arandanos',1)" type="button">+</button>
+            </div>
+          </div>
+          <div class="variedad-card" data-tipo="Clasica">
+            <div class="variedad-emoji">🌾</div>
+            <div class="variedad-label">Clasica</div>
+            <div class="variedad-precio" id="phint-Clasica"></div>
+            <div class="variedad-qty">
+              <button class="qty-btn" onclick="changeQty('Clasica',-1)" type="button">−</button>
+              <input class="qty-input" type="number" id="qty-Clasica" value="0" min="0" oninput="onQtyInput('Clasica')" />
+              <button class="qty-btn" onclick="changeQty('Clasica',1)" type="button">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group full">
+        <label>Importe total (calculado automáticamente)</label>
+        <div class="importe-display" id="importeDisplay">$ 0,00</div>
+      </div>
+
+      <div class="form-group">
+        <label>Descuento (ARS)</label>
+        <div class="input-prefix">
+          <span>$</span>
+          <input type="number" id="descuento" min="0" step="0.01" placeholder="0.00" oninput="recalcImporte()" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Envío / Zona</label>
+        <input type="text" id="envio" placeholder="Ej: Belgrano, Palermo…" />
+      </div>
+
+      <div class="form-divider"></div>
+
+      <div class="form-group full">
+        <label>Estado del pedido</label>
+        <div class="estado-pills">
+          <div class="estado-pill selected" data-estado="Pedido"    onclick="selectEstado(this)">📋 Pedido</div>
+          <div class="estado-pill"          data-estado="Aprobado"  onclick="selectEstado(this)">✅ Aprobado</div>
+          <div class="estado-pill"          data-estado="Enviando"  onclick="selectEstado(this)">🚚 Enviando</div>
+          <div class="estado-pill"          data-estado="Entregado" onclick="selectEstado(this)">📦 Entregado</div>
+        </div>
+        <input type="hidden" id="estado" value="Pedido" />
+      </div>
+
+      <div class="form-group">
+        <label>Fecha del pedido</label>
+        <input type="date" id="fechaPedido" />
+      </div>
+      <div class="form-group">
+        <label>Fecha de entrega</label>
+        <input type="date" id="fechaEntrega" />
+      </div>
+
+      <div class="form-divider"></div>
+
+      <div class="form-group">
+        <label>Persona de contacto</label>
+        <input type="text" id="contacto" placeholder="Nombre y apellido" />
+      </div>
+      <div class="form-group">
+        <label>Número de pedido</label>
+        <input type="text" id="numPedido" readonly placeholder="Cargando…" title="Se asigna automáticamente desde Sheets" />
+      </div>
+
+      <div class="form-group full">
+        <label>Notas</label>
+        <textarea id="notas" placeholder="Observaciones, preferencias, método de pago…"></textarea>
+      </div>
+
+    </div>
+    <button class="btn-submit" id="submitBtn" onclick="submitPedido()">
+      <div class="btn-spinner"></div>
+      <span class="btn-label">Registrar pedido →</span>
+    </button>
+  </div>
+
+  <!-- Historial -->
+  <div class="section-header">
+    <div class="section-header-title">Pedidos recientes</div>
+    <div class="section-header-line"></div>
+  </div>
+  <div id="pedidosList"><div class="empty-state">Los pedidos registrados aparecerán aquí</div></div>
+
+</div>
+
+<!-- Modal edición -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar pedido</div>
+    <div class="modal-grid">
+      <div class="form-group modal-full">
+        <label>Variedades y cantidades</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+          <div><div style="font-size:18px;">🍫</div><div style="font-size:11px;color:var(--muted);font-weight:600;margin:4px 0;">Chocolate</div><input type="number" id="m-qty-Chocolate" min="0" value="0" style="text-align:center;padding:6px;" /></div>
+          <div><div style="font-size:18px;">🫐</div><div style="font-size:11px;color:var(--muted);font-weight:600;margin:4px 0;">Arandanos</div><input type="number" id="m-qty-Arandanos" min="0" value="0" style="text-align:center;padding:6px;" /></div>
+          <div><div style="font-size:18px;">🌾</div><div style="font-size:11px;color:var(--muted);font-weight:600;margin:4px 0;">Clasica</div><input type="number" id="m-qty-Clasica" min="0" value="0" style="text-align:center;padding:6px;" /></div>
+        </div>
+      </div>
+      <div class="form-group"><label>Descuento</label><input type="number" id="m-descuento" placeholder="0" min="0" /></div>
+      <div class="form-group"><label>Envío / Zona</label><input type="text" id="m-envio" /></div>
+      <div class="form-group modal-full"><label>Estado</label><select id="m-estado"><option>Pedido</option><option>Aprobado</option><option>Enviando</option><option>Entregado</option></select></div>
+      <div class="form-group"><label>Fecha pedido</label><input type="date" id="m-fechaPedido" /></div>
+      <div class="form-group"><label>Fecha entrega</label><input type="date" id="m-fechaEntrega" /></div>
+      <div class="form-group"><label>Contacto</label><input type="text" id="m-contacto" /></div>
+      <div class="form-group"><label>N° pedido</label><input type="text" id="m-numPedido" /></div>
+      <div class="form-group modal-full"><label>Notas</label><textarea id="m-notas" style="min-height:60px;"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-modal-save" onclick="saveEdit()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastIcon"></span><span id="toastMsg"></span></div>
+
+<script>
+  const STORAGE_KEY = 'crune_config';
+  const HISTORY_KEY = 'crune_history';
+
+  // Precios por cantidad (precio total de esa variedad)
+  const PRECIOS = { 1: 5000, 2: 9000, 3: 13400, 4: 17500 };
+
+  const TIPOS = ['Chocolate', 'Arandanos', 'Clasica'];
+  const TIPO_EMOJI = { Chocolate:'🍫', Arandanos:'🫐', Clasica:'🌾' };
+  const BADGE_CLASS = { Pedido:'badge-pedido', Aprobado:'badge-aprobado', Enviando:'badge-enviando', Entregado:'badge-entregado' };
+
+  let scriptUrl = '';
+  let pedidos = [];
+  let editingId = null;
+
+  /* ===== INIT ===== */
+  window.onload = () => {
+    document.getElementById('fechaPedido').value = today();
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const cfg = JSON.parse(saved);
+      scriptUrl = cfg.url || '';
+      document.getElementById('scriptUrl').value = scriptUrl;
+      if (scriptUrl) { setStatus('ok'); fetchNextNumPedido(); }
+      else setStatus('idle');
+    } else {
+      setStatus('idle');
+      toggleConfig(true);
+    }
+    const hist = localStorage.getItem(HISTORY_KEY);
+    if (hist) { pedidos = JSON.parse(hist); renderHistory(); }
+  };
+
+  function today() { return new Date().toISOString().split('T')[0]; }
+
+  /* ===== STATUS ===== */
+  function setStatus(s) {
+    const dot = document.getElementById('statusDot'), txt = document.getElementById('statusText');
+    dot.className = 'status-dot';
+    if (s==='ok')  { dot.classList.add('ok');  txt.textContent='Conectado'; }
+    else if (s==='err') { dot.classList.add('err'); txt.textContent='Error de conexión'; }
+    else txt.textContent='Sin configurar';
+  }
+
+  /* ===== CONFIG ===== */
+  function toggleConfig(forceOpen) {
+    const body=document.getElementById('configBody'), arrow=document.getElementById('configArrow');
+    const open = forceOpen!==undefined ? forceOpen : !body.classList.contains('open');
+    body.classList.toggle('open', open);
+    arrow.textContent = open ? '▲' : '▼';
+  }
+
+  function saveConfig() {
+    const url = document.getElementById('scriptUrl').value.trim();
+    if (!url) { showToast('error','Ingresá la URL'); return; }
+    scriptUrl = url;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({url}));
+    setStatus('ok');
+    showToast('success','Conexión guardada');
+    toggleConfig(false);
+    fetchNextNumPedido();
+  }
+
+  /* ===== NÚMERO DE PEDIDO AUTOMÁTICO ===== */
+  async function fetchNextNumPedido() {
+    const input = document.getElementById('numPedido');
+    input.placeholder = 'Cargando…';
+    try {
+      const res = await fetch(scriptUrl + '?action=lastNumPedido');
+      const data = await res.json();
+      if (data.result === 'ok') {
+        const next = (parseInt(data.lastNum) || 0) + 1;
+        input.value = '#' + next;
+        input.style.opacity = '1';
+      } else throw new Error();
+    } catch {
+      input.placeholder = 'Sin conexión';
+      input.style.opacity = '0.5';
+    }
+  }
+
+  /* ===== CANTIDADES ===== */
+  function changeQty(tipo, delta) {
+    const input = document.getElementById('qty-' + tipo);
+    const val = Math.max(0, (parseInt(input.value)||0) + delta);
+    input.value = val;
+    updateCard(tipo, val);
+    recalcImporte();
+  }
+
+  function onQtyInput(tipo) {
+    const val = Math.max(0, parseInt(document.getElementById('qty-'+tipo).value)||0);
+    document.getElementById('qty-'+tipo).value = val;
+    updateCard(tipo, val);
+    recalcImporte();
+  }
+
+  function updateCard(tipo, val) {
+    const card = document.querySelector(`.variedad-card[data-tipo="${tipo}"]`);
+    if (card) card.classList.toggle('active', val > 0);
+    const hint = document.getElementById('phint-' + tipo);
+    if (hint) {
+      if (val > 0 && PRECIOS[val]) hint.textContent = '$ ' + fmtNum(PRECIOS[val]);
+      else if (val > 4) hint.textContent = 'consultar precio';
+      else hint.textContent = '';
+    }
+  }
+
+  function recalcImporte() {
+    let total = 0;
+    TIPOS.forEach(t => {
+      const qty = parseInt(document.getElementById('qty-'+t).value)||0;
+      if (qty > 0) total += PRECIOS[qty] || (qty * PRECIOS[4] / 4);
+    });
+    const desc = parseFloat(document.getElementById('descuento').value)||0;
+    const neto = Math.max(0, total - desc);
+    const el = document.getElementById('importeDisplay');
+    el.textContent = '$ ' + fmtNum(neto);
+    el.classList.toggle('has-value', neto > 0);
+    return neto;
+  }
+
+  function getVariedades() {
+    return TIPOS.map(t => ({ tipo:t, cantidad: parseInt(document.getElementById('qty-'+t).value)||0 })).filter(v=>v.cantidad>0);
+  }
+
+  /* ===== ESTADO ===== */
+  function selectEstado(el) {
+    document.querySelectorAll('.estado-pill').forEach(p=>p.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('estado').value = el.dataset.estado;
+  }
+
+  /* ===== SUBMIT ===== */
+  async function submitPedido() {
+    if (!scriptUrl) { showToast('error','Configurá la URL primero'); toggleConfig(true); return; }
+    const variedades = getVariedades();
+    if (variedades.length === 0) { showToast('error','Agregá al menos una variedad'); return; }
+
+    const importe      = recalcImporte();
+    const descuento    = document.getElementById('descuento').value || '0';
+    const envio        = document.getElementById('envio').value.trim();
+    const estado       = document.getElementById('estado').value;
+    const fechaPedido  = document.getElementById('fechaPedido').value;
+    const fechaEntrega = document.getElementById('fechaEntrega').value;
+    const contacto     = document.getElementById('contacto').value.trim();
+    const numPedido    = document.getElementById('numPedido').value.trim();
+    const notas        = document.getElementById('notas').value.trim();
+
+    const payloads = variedades.map(v => ({ tipo:v.tipo, cantidad:v.cantidad, descuento, estado, fechaPedido, fechaEntrega, importe, envio, contacto, numPedido, notas }));
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.classList.add('loading');
+
+    let ok = false;
+    for (const payload of payloads) {
+      try {
+        const res = await fetch(scriptUrl, { method:'POST', body:JSON.stringify(payload), headers:{'Content-Type':'application/json'} });
+        const data = await res.json();
+        if (data.result!=='ok') throw new Error(data.error);
+        ok = true;
+      } catch {
+        try {
+          await fetch(scriptUrl, { method:'POST', mode:'no-cors', body:JSON.stringify(payload), headers:{'Content-Type':'application/json'} });
+          ok = true;
+        } catch {
+          showToast('error','Error al conectar. Revisá la URL.');
+          setStatus('err');
+          btn.disabled=false; btn.classList.remove('loading');
+          return;
+        }
+      }
+    }
+
+    if (ok) {
+      const id = Date.now();
+      addToHistory({ id, variedades, descuento, estado, fechaPedido, fechaEntrega, importe, envio, contacto, numPedido, notas });
+      showToast('success', `¡${payloads.length} fila${payloads.length>1?'s':''} registrada${payloads.length>1?'s':''} en Sheets!`);
+      resetForm();
+      fetchNextNumPedido(); // actualizar el siguiente número
+    }
+
+    btn.disabled=false; btn.classList.remove('loading');
+  }
+
+  /* ===== RESET ===== */
+  function resetForm() {
+    TIPOS.forEach(t => { document.getElementById('qty-'+t).value=0; updateCard(t,0); });
+    document.getElementById('descuento').value='';
+    document.getElementById('envio').value='';
+    document.querySelectorAll('.estado-pill').forEach(p=>p.classList.remove('selected'));
+    document.querySelector('.estado-pill[data-estado="Pedido"]').classList.add('selected');
+    document.getElementById('estado').value='Pedido';
+    document.getElementById('fechaPedido').value=today();
+    document.getElementById('fechaEntrega').value='';
+    document.getElementById('contacto').value='';
+    document.getElementById('notas').value='';
+    recalcImporte();
+  }
+
+  /* ===== HISTORIAL ===== */
+  function addToHistory(p) {
+    pedidos.unshift(p);
+    if (pedidos.length > 50) pedidos.pop();
+    saveHistory(); renderHistory();
+  }
+
+  function saveHistory() { localStorage.setItem(HISTORY_KEY, JSON.stringify(pedidos)); }
+
+  function renderHistory() {
+    const list = document.getElementById('pedidosList');
+    if (!pedidos.length) { list.innerHTML='<div class="empty-state">Los pedidos registrados aparecerán aquí</div>'; return; }
+    list.innerHTML = pedidos.map(p => {
+      const vars = p.variedades || [{tipo:p.tipo, cantidad:p.cantidad}];
+      const tiposStr = vars.map(v=>`${TIPO_EMOJI[v.tipo]||''}${v.tipo} ×${v.cantidad}`).join(' · ');
+      const primerTipo = vars.length===1 ? vars[0].tipo : 'multi';
+      return `<div class="pedido-card" data-tipo="${esc(primerTipo)}" data-id="${p.id}">
+        <div class="pedido-card-header">
+          <div class="pedido-card-left">
+            <span class="pedido-nombre">${tiposStr}</span><span class="pedido-num">${esc(p.numPedido||'')}</span>
+            <div class="pedido-meta">${p.contacto?esc(p.contacto)+' · ':''}${p.fechaPedido?fmt(p.fechaPedido):'—'}${p.fechaEntrega?' → '+fmt(p.fechaEntrega):''}${p.envio?' · '+esc(p.envio):''}</div>
+          </div>
+          <div class="pedido-card-right">
+            <span class="pedido-importe">$ ${fmtNum(p.importe)}</span>
+            <span class="badge ${BADGE_CLASS[p.estado]||''}">${esc(p.estado)}</span>
+          </div>
+        </div>
+        <div class="pedido-actions">
+          <button class="btn-action edit" onclick="openEdit(${p.id})">✏️ Editar</button>
+          <button class="btn-action del"  onclick="deletePedido(${p.id})">🗑 Borrar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /* ===== EDITAR ===== */
+  function openEdit(id) {
+    const p = pedidos.find(x=>x.id===id);
+    if (!p) return;
+    editingId = id;
+    const vars = p.variedades || [{tipo:p.tipo, cantidad:p.cantidad}];
+    TIPOS.forEach(t => { const v=vars.find(x=>x.tipo===t); document.getElementById('m-qty-'+t).value = v?v.cantidad:0; });
+    document.getElementById('m-descuento').value   = p.descuento||'';
+    document.getElementById('m-envio').value       = p.envio||'';
+    document.getElementById('m-estado').value      = p.estado||'Pedido';
+    document.getElementById('m-fechaPedido').value = p.fechaPedido||'';
+    document.getElementById('m-fechaEntrega').value= p.fechaEntrega||'';
+    document.getElementById('m-contacto').value    = p.contacto||'';
+    document.getElementById('m-numPedido').value   = p.numPedido||'';
+    document.getElementById('m-notas').value       = p.notas||'';
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function closeModal(e) {
+    if (e && e.target!==document.getElementById('modalOverlay')) return;
+    document.getElementById('modalOverlay').classList.remove('open');
+    editingId = null;
+  }
+
+  function saveEdit() {
+    if (editingId===null) return;
+    const idx = pedidos.findIndex(x=>x.id===editingId);
+    if (idx<0) return;
+    const variedades = TIPOS.map(t=>({tipo:t, cantidad:parseInt(document.getElementById('m-qty-'+t).value)||0})).filter(v=>v.cantidad>0);
+    let total=0;
+    variedades.forEach(v=>{ total += PRECIOS[v.cantidad]||(v.cantidad*PRECIOS[4]/4); });
+    const desc = parseFloat(document.getElementById('m-descuento').value)||0;
+    const importe = Math.max(0, total-desc);
+    pedidos[idx] = { ...pedidos[idx], variedades, importe,
+      descuento:    document.getElementById('m-descuento').value,
+      envio:        document.getElementById('m-envio').value,
+      estado:       document.getElementById('m-estado').value,
+      fechaPedido:  document.getElementById('m-fechaPedido').value,
+      fechaEntrega: document.getElementById('m-fechaEntrega').value,
+      contacto:     document.getElementById('m-contacto').value,
+      numPedido:    document.getElementById('m-numPedido').value,
+      notas:        document.getElementById('m-notas').value,
+    };
+    saveHistory(); renderHistory();
+    document.getElementById('modalOverlay').classList.remove('open');
+    editingId = null;
+    showToast('success','Pedido actualizado');
+  }
+
+  /* ===== BORRAR ===== */
+  function deletePedido(id) {
+    if (!confirm('¿Borrar este pedido del historial?')) return;
+    pedidos = pedidos.filter(x=>x.id!==id);
+    saveHistory(); renderHistory();
+    showToast('success','Pedido eliminado');
+  }
+
+  /* ===== HELPERS ===== */
+  function fmt(d) { if(!d)return''; const[y,m,day]=d.split('-'); return`${day}/${m}/${y}`; }
+  function fmtNum(n) { return parseFloat(n||0).toLocaleString('es-AR',{minimumFractionDigits:2}); }
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  let toastTimer;
+  function showToast(type,msg) {
+    const t=document.getElementById('toast');
+    document.getElementById('toastIcon').textContent = type==='success'?'✓':'✕';
+    document.getElementById('toastMsg').textContent = msg;
+    t.className='toast '+type+' show';
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
+  }
+</script>
+</body>
+</html>
