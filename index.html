@@ -510,7 +510,12 @@
     const numPedido    = document.getElementById('numPedido').value.trim();
     const notas        = document.getElementById('notas').value.trim();
 
-    const payloads = variedades.map(v => ({ tipo:v.tipo, cantidad:v.cantidad, descuento, estado, fechaPedido, fechaEntrega, importe, envio, contacto, numPedido, notas }));
+    const payloads = variedades.map((v, i) => ({
+      tipo: v.tipo, cantidad: v.cantidad,
+      descuento, estado, fechaPedido, fechaEntrega,
+      importe, envio, contacto, numPedido, notas,
+      isLast: i === variedades.length - 1   // solo la última fila lleva los datos completos
+    }));
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; btn.classList.add('loading');
@@ -648,11 +653,35 @@
   }
 
   /* ===== BORRAR ===== */
-  function deletePedido(id) {
-    if (!confirm('¿Borrar este pedido del historial?')) return;
+  async function deletePedido(id) {
+    const p = pedidos.find(x=>x.id===id);
+    if (!p) return;
+    const label = p.numPedido ? `pedido ${p.numPedido}` : 'este pedido';
+    if (!confirm(`¿Borrar ${label} del historial y del Sheet?`)) return;
+
+    // Borrar localmente primero
     pedidos = pedidos.filter(x=>x.id!==id);
     saveHistory(); renderHistory();
-    showToast('success','Pedido eliminado');
+
+    // Borrar en Sheets si tiene número de pedido y hay URL configurada
+    if (scriptUrl && p.numPedido) {
+      try {
+        await fetch(scriptUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'delete', numPedido: p.numPedido }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch {
+        try {
+          await fetch(scriptUrl, { method:'POST', mode:'no-cors',
+            body: JSON.stringify({ action:'delete', numPedido: p.numPedido }),
+            headers: {'Content-Type':'application/json'} });
+        } catch { /* silencioso */ }
+      }
+      showToast('success', `${p.numPedido} eliminado del historial y del Sheet`);
+    } else {
+      showToast('success', 'Pedido eliminado del historial');
+    }
   }
 
   /* ===== HELPERS ===== */
